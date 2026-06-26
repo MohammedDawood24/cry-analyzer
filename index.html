@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#14122B" />
+<title>Lullaby — baby cry analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night:#14122B; --night-2:#1B1838; --raised:#221F45; --surface:#2A2658;
+    --line:rgba(255,255,255,.08);
+    --glow:#FFC15E;        /* nightlight amber */
+    --glow-soft:#FFD79A;
+    --rose:#FF9E80;        /* warm coral */
+    --mint:#8FE3D0;        /* calm / actions */
+    --alert:#FF8A95;       /* gentle medical flag */
+    --hi:#F3EFFF; --mid:#BFB8DE; --lo:#857DA8;
+    --r:20px;
+    --maxw:560px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #2A2660 0%, rgba(42,38,96,0) 55%),
+      radial-gradient(80% 60% at 85% 5%, rgba(255,193,94,.10) 0%, rgba(255,193,94,0) 60%),
+      var(--night);
+    color:var(--hi);
+    min-height:100dvh;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:28px 20px calc(40px + env(safe-area-inset-bottom));}
+  .eyebrow{font-family:'Quicksand';font-weight:600;letter-spacing:.18em;text-transform:uppercase;font-size:11px;color:var(--glow-soft);opacity:.85}
+  h1{font-family:'Quicksand';font-weight:700;font-size:30px;line-height:1.1;margin:8px 0 6px;letter-spacing:-.01em}
+  .sub{color:var(--mid);font-size:14.5px;max-width:42ch}
+  .sub b{color:var(--hi);font-weight:600}
+
+  /* ---- signature: the nightlight orb ---- */
+  .stage{display:flex;flex-direction:column;align-items:center;margin:30px 0 8px;}
+  .orb-btn{
+    appearance:none;border:0;cursor:pointer;background:transparent;padding:0;
+    position:relative;width:230px;height:230px;border-radius:50%;
+    display:grid;place-items:center;
+  }
+  .orb{
+    position:absolute;inset:34px;border-radius:50%;
+    background:
+      radial-gradient(60% 60% at 35% 30%, var(--glow-soft) 0%, var(--glow) 38%, #E89B3C 78%, #B9722A 100%);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.18) inset,
+      0 0 40px 6px rgba(255,193,94,.35),
+      0 0 120px 30px rgba(255,193,94,.22);
+    animation:breathe 4.2s ease-in-out infinite;
+    transition:filter .3s ease;
+  }
+  .ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,193,94,.25)}
+  .ring.r2{inset:14px;border-color:rgba(255,193,94,.14)}
+  .orb-core{position:relative;text-align:center;z-index:2;color:#3a230a}
+  .orb-core .ico{font-size:34px;line-height:1}
+  .orb-core .lbl{font-family:'Quicksand';font-weight:700;font-size:15px;margin-top:4px;letter-spacing:.01em}
+  .orb-canvas{position:absolute;inset:34px;border-radius:50%;z-index:1;display:none}
+  .listening .orb{animation:pulse 1.1s ease-in-out infinite;filter:saturate(1.1)}
+  .listening .orb-canvas{display:block}
+  .listening .orb-core .ico{display:none}
+  .analyzing .orb{animation:spinglow 1.4s linear infinite}
+
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  @keyframes spinglow{0%{filter:hue-rotate(0deg) saturate(1.1)}100%{filter:hue-rotate(28deg) saturate(1.1)}}
+
+  .hint{color:var(--lo);font-size:13px;margin-top:14px;text-align:center;min-height:18px}
+  .secondary{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .ghost{
+    appearance:none;font-family:'Quicksand';font-weight:600;font-size:13px;
+    background:var(--raised);color:var(--mid);border:1px solid var(--line);
+    padding:9px 14px;border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .ghost:hover{color:var(--hi);border-color:rgba(255,255,255,.2)}
+  .ghost:active{transform:translateY(1px)}
+
+  /* ---- result ---- */
+  .result{margin-top:26px;display:none;animation:rise .45s cubic-bezier(.2,.8,.2,1)}
+  .result.show{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .top-card{
+    background:linear-gradient(180deg,var(--surface),var(--raised));
+    border:1px solid var(--line);border-radius:var(--r);padding:20px;
+    box-shadow:0 18px 50px -28px rgba(0,0,0,.8);
+  }
+  .top-head{display:flex;align-items:center;gap:14px}
+  .top-emoji{font-size:38px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.4))}
+  .top-meta .k{font-family:'Quicksand';font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--lo)}
+  .top-meta .v{font-family:'Quicksand';font-weight:700;font-size:22px;line-height:1.15}
+  .conf{margin-left:auto;text-align:right}
+  .conf .num{font-family:'Quicksand';font-weight:700;font-size:26px;color:var(--glow)}
+  .conf .cap{font-size:10.5px;color:var(--lo);letter-spacing:.04em}
+
+  .why{margin-top:16px}
+  .why .ttl{font-size:12px;color:var(--lo);margin-bottom:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font-size:12px;color:var(--glow-soft);background:rgba(255,193,94,.10);
+    border:1px solid rgba(255,193,94,.22);padding:5px 10px;border-radius:8px}
+
+  .actions{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .actions .ttl{font-size:12px;color:var(--lo);margin-bottom:8px}
+  .actions ul{margin:0;padding-left:18px;color:var(--mid);font-size:14px}
+  .actions li{margin:4px 0}
+  .actions li::marker{color:var(--mint)}
+
+  .bars{margin-top:18px;background:var(--night-2);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+  .bars .ttl{font-size:12px;color:var(--lo);margin-bottom:12px;display:flex;justify-content:space-between}
+  .bar-row{display:flex;align-items:center;gap:10px;margin:9px 0}
+  .bar-row .name{width:128px;font-size:13px;color:var(--mid);display:flex;gap:7px;align-items:center}
+  .bar-row .name .e{font-size:14px}
+  .track{flex:1;height:8px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden}
+  .fill{height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--rose),var(--glow));transition:width .9s cubic-bezier(.2,.8,.2,1)}
+  .bar-row .pct{width:38px;text-align:right;font-size:12px;color:var(--lo);font-variant-numeric:tabular-nums}
+
+  /* ---- disclaimer / info ---- */
+  .flag{
+    margin-top:18px;display:flex;gap:12px;align-items:flex-start;
+    background:rgba(255,138,149,.07);border:1px solid rgba(255,138,149,.25);
+    border-radius:16px;padding:14px 15px;
+  }
+  .flag .ic{font-size:18px;line-height:1.3}
+  .flag p{margin:0;font-size:13px;color:#FFD3D8}
+  .flag b{color:#fff}
+  .flag.ok{background:rgba(143,227,208,.08);border-color:rgba(143,227,208,.30)}
+  .flag.ok p{color:#D2F4EC}
+  .flag.emergency{background:rgba(255,90,100,.16);border-color:rgba(255,90,100,.55)}
+  .flag.emergency p{color:#FFE0E3}
+  .flag.emergency .ic{font-size:20px}
+
+  .temp-panel{margin-top:20px;background:var(--raised);border:1px solid var(--line);border-radius:16px;padding:15px 16px}
+  .temp-panel .lead{font-size:13.5px;color:var(--mid);margin:0 0 13px;display:flex;gap:8px;align-items:center}
+  .temp-panel .lead .e{font-size:17px}
+  .field{display:flex;flex-direction:column;gap:7px;margin-bottom:13px}
+  .field:last-child{margin-bottom:0}
+  .field > label{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--lo);font-family:'Quicksand';font-weight:600}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:78px;appearance:none;font-family:'Inter';font-size:12.5px;color:var(--mid);
+    background:var(--night-2);border:1px solid var(--line);padding:9px 8px;border-radius:10px;cursor:pointer;transition:.15s}
+  .seg button.on{background:rgba(255,193,94,.14);border-color:rgba(255,193,94,.45);color:var(--glow-soft)}
+  .temp-input{display:flex;gap:8px;align-items:stretch}
+  .temp-input input{flex:1;background:var(--night-2);border:1px solid var(--line);border-radius:10px;
+    color:var(--hi);font-size:16px;padding:10px 12px;font-family:'Inter';min-width:0}
+  .temp-input input:focus{outline:none;border-color:rgba(255,193,94,.5)}
+  .unit{display:flex}
+  .unit button{appearance:none;background:var(--night-2);border:1px solid var(--line);color:var(--mid);
+    padding:0 15px;cursor:pointer;font-family:'Quicksand';font-weight:600;font-size:14px}
+  .unit button:first-child{border-radius:10px 0 0 10px}
+  .unit button:last-child{border-radius:0 10px 10px 0;border-left:0}
+  .unit button.on{background:rgba(255,193,94,.14);border-color:rgba(255,193,94,.45);color:var(--glow-soft)}
+  .chip.adj{color:#FFC9CF;background:rgba(255,138,149,.12);border-color:rgba(255,138,149,.3)}
+
+  details{margin-top:14px;background:var(--raised);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  summary{cursor:pointer;list-style:none;padding:14px 16px;font-family:'Quicksand';font-weight:600;font-size:14px;color:var(--mid);display:flex;justify-content:space-between;align-items:center}
+  summary::-webkit-details-marker{display:none}
+  summary .caret{transition:.2s;color:var(--lo)}
+  details[open] summary .caret{transform:rotate(90deg)}
+  .det-body{padding:0 16px 16px;color:var(--mid);font-size:13.5px}
+  .det-body p{margin:8px 0}
+  .det-body strong{color:var(--hi)}
+
+  footer{margin-top:26px;text-align:center;color:var(--lo);font-size:11.5px;line-height:1.6}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:#332e63;color:var(--hi);border:1px solid var(--line);padding:11px 16px;border-radius:12px;
+    font-size:13px;opacity:0;pointer-events:none;transition:.3s;z-index:30;max-width:90vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (prefers-reduced-motion: reduce){
+    .orb,.listening .orb,.analyzing .orb{animation:none !important}
+    .fill{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Acoustic cry analyzer · on‑device</div>
+    <h1>Why is baby crying?</h1>
+    <p class="sub">Tap the nightlight, hold your phone near baby for ~6 seconds, and Lullaby listens to the <b>pitch, rhythm and texture</b> of the cry to suggest the most likely reason.</p>
+  </header>
+
+  <div class="stage">
+    <button id="orbBtn" class="orb-btn" aria-label="Start listening">
+      <span class="ring"></span><span class="ring r2"></span>
+      <span class="orb"></span>
+      <canvas class="orb-canvas" id="wave" width="324" height="324"></canvas>
+      <span class="orb-core">
+        <span class="ico">🎙️</span>
+        <span class="lbl" id="orbLbl">Listen</span>
+      </span>
+    </button>
+    <div class="hint" id="hint">Best in a quiet room, close to baby</div>
+    <div class="secondary">
+      <button class="ghost" id="uploadBtn">Upload a recording</button>
+      <input type="file" id="file" accept="audio/*" hidden />
+    </div>
+  </div>
+
+  <div class="temp-panel">
+    <p class="lead"><span class="e">🌡️</span> Add baby's temperature (optional) — sharpens the reading and checks for fever</p>
+    <div class="field">
+      <label>Baby's age</label>
+      <div class="seg" id="ageSeg">
+        <button data-age="newborn" class="on">Under 3 months</button>
+        <button data-age="infant">3–6 months</button>
+        <button data-age="older">6–24 months</button>
+        <button data-age="toddler">Over 2 years</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Measured temperature</label>
+      <div class="temp-input">
+        <input id="tempVal" type="number" inputmode="decimal" step="0.1" placeholder="e.g. 37.5" />
+        <div class="unit" id="unitSeg">
+          <button data-unit="c" class="on">°C</button>
+          <button data-unit="f">°F</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="result" id="result">
+    <div id="tempVerdict"></div>
+    <div class="top-card">
+      <div class="top-head">
+        <div class="top-emoji" id="topEmoji">🍼</div>
+        <div class="top-meta">
+          <div class="k">Most likely</div>
+          <div class="v" id="topName">Hungry</div>
+        </div>
+        <div class="conf">
+          <div class="num" id="topConf">—</div>
+          <div class="cap">est. confidence</div>
+        </div>
+      </div>
+      <div class="why">
+        <div class="ttl">What the cry sounded like</div>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="actions">
+        <div class="ttl">Gentle things to try</div>
+        <ul id="tips"></ul>
+      </div>
+    </div>
+
+    <div class="bars">
+      <div class="ttl"><span>Full breakdown</span><span id="dur"></span></div>
+      <div id="barList"></div>
+    </div>
+
+    <div class="flag">
+      <span class="ic">⚕️</span>
+      <p><b>Not a medical device.</b> The cry reading is a hint, and any fever guidance comes from the temperature you enter — not the sound. It can't diagnose illness. If your baby has a fever (especially if under 3 months), is breathing oddly, won't feed, is unusually limp or floppy, or stays inconsolable, contact a doctor or emergency services right away.</p>
+    </div>
+  </section>
+
+  <details>
+    <summary>How accurate is this, really? <span class="caret">›</span></summary>
+    <div class="det-body">
+      <p><strong>Honest answer: it's a helpful hint, not a verdict.</strong> Lullaby measures real acoustic features of the cry — fundamental pitch, brightness, loudness, and the burst‑and‑pause rhythm — and matches them against the documented sound signatures of common cry types (rhythmic = hungry, high‑pitched and continuous = discomfort, breathy and low = tired, and so on).</p>
+      <p>Even the best research models trained on labelled cry datasets reach roughly <strong>70–90%</strong> on clean recordings, and lower in a noisy home. So treat the percentage as a lean, not a fact. Adding a <strong>measured temperature</strong> helps because it covers what sound can't: the cry alone can't reveal fever, but a thermometer can — so the two together give a fuller picture and flag illness the audio would miss. <strong>You</strong> know your baby's cues and routine better than any model — use this alongside your judgement.</p>
+      <p>Everything runs on your device. No audio is uploaded or stored.</p>
+    </div>
+  </details>
+
+  <footer>
+    Lullaby · acoustic cry analyzer · runs entirely in your browser<br/>
+    Made to support tired parents — never to replace medical care.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Cry categories: friendly label, emoji, gentle suggestions
+   ============================================================ */
+const CATS = {
+  hungry:     { name:"Hungry",            e:"🍼", tips:[
+    "Offer a feed — watch for rooting, lip‑smacking or hands to mouth.",
+    "A hungry cry often builds and repeats; earlier is calmer than later."]},
+  tired:      { name:"Tired / sleepy",    e:"😴", tips:[
+    "Dim the lights and lower the noise to start a wind‑down.",
+    "Try swaddling, gentle rocking and steady white noise."]},
+  discomfort: { name:"Discomfort / gas",  e:"😣", tips:[
+    "Bicycle the legs and try a soft clockwise tummy massage.",
+    "Check the diaper, and for anything tight, a hair tourniquet, or a stray label.",
+    "Hold upright; warmth on the tummy can ease trapped wind."]},
+  burp:       { name:"Needs burping",     e:"🫧", tips:[
+    "Hold upright against your shoulder and pat the back gently.",
+    "A short pause mid‑feed to burp often settles fussing."]},
+  comfort:    { name:"Wants comfort",     e:"🤱", tips:[
+    "Pick up, hold close, skin‑to‑skin and a soft voice.",
+    "Slow rocking or a gentle walk can reset an overstimulated baby."]},
+};
+const ORDER = ["hungry","discomfort","tired","burp","comfort"];
+
+/* ============================================================
+   Audio plumbing
+   ============================================================ */
+let audioCtx;
+const RECORD_MS = 6000;
+
+const $ = (id)=>document.getElementById(id);
+const orbBtn=$('orbBtn'), orbLbl=$('orbLbl'), hint=$('hint'),
+      result=$('result'), waveCanvas=$('wave');
+let busy=false;
+
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200);}
+
+orbBtn.addEventListener('click',()=>{ if(!busy) startMicCapture(); });
+$('uploadBtn').addEventListener('click',()=>$('file').click());
+
+/* ---- temperature inputs ---- */
+let UNIT='c', AGE='newborn';
+$('unitSeg').addEventListener('click',(e)=>{
+  const b=e.target.closest('button'); if(!b) return;
+  UNIT=b.dataset.unit;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
+});
+$('ageSeg').addEventListener('click',(e)=>{
+  const b=e.target.closest('button'); if(!b) return;
+  AGE=b.dataset.age;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b));
+});
+
+function tempVerdict(){
+  const raw=parseFloat($('tempVal').value);
+  if(!isFinite(raw)) return null;
+  let c = UNIT==='f' ? (raw-32)*5/9 : raw;
+  if(c<25 || c>45) return {level:'bad'};         // implausible / wrong unit
+  const f=c*9/5+32, newborn=(AGE==='newborn');
+  let level;
+  if(c < 36.0) level='low';
+  else if(c < 38.0) level='ok';
+  else if(newborn) level='emergency';            // any fever under 3 months
+  else if(c >= 39.4) level='high';
+  else level='fever';
+  return {level, c, f};
+}
+
+function renderTemp(v){
+  const host=$('tempVerdict'); host.innerHTML='';
+  if(!v) return;
+  const tmp = v.c!=null ? `${v.c.toFixed(1)}°C / ${v.f.toFixed(1)}°F` : '';
+  const M={
+    bad:{cls:'',ic:'🌡️',html:`<b>That reading looks off.</b> Please re‑enter the temperature and check the unit (°C / °F) is right.`},
+    low:{cls:'emergency',ic:'🚨',html:`<b>Low temperature (${tmp}).</b> Under 36°C a baby can be too cold, which can itself be a warning sign. Warm baby with skin‑to‑skin contact and contact a doctor now, especially for a young infant.`},
+    ok:{cls:'ok',ic:'✅',html:`<b>No fever — temperature is normal (${tmp}).</b> So the crying is more likely behavioural. The reading below is the likeliest reason.`},
+    fever:{cls:'',ic:'🌡️',html:`<b>Baby has a fever (${tmp}).</b> Together with crying this suggests your baby feels unwell. Offer comfort and fluids, keep them lightly dressed, watch closely, and contact your doctor for advice — sooner if it rises or baby seems worse.`},
+    high:{cls:'emergency',ic:'🚨',html:`<b>High fever (${tmp}).</b> Contact a doctor promptly. Seek urgent care if baby is hard to wake, breathing fast, has a rash that doesn't fade under pressure, a stiff neck, or won't take fluids.`},
+    emergency:{cls:'emergency',ic:'🚨',html:`<b>Fever in a baby under 3 months (${tmp}).</b> This is treated as a medical emergency. Contact a doctor or emergency services right away — please don't wait for the crying to settle.`},
+  };
+  const m=M[v.level];
+  const el=document.createElement('div');
+  el.className='flag '+(m.cls||'');
+  el.innerHTML=`<span class="ic">${m.ic}</span><p>${m.html}</p>`;
+  host.appendChild(el);
+}
+$('file').addEventListener('change',(e)=>{
+  const f=e.target.files[0]; if(f) handleFile(f); e.target.value="";
+});
+
+async function startMicCapture(){
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({audio:{
+      echoCancellation:false, noiseSuppression:false, autoGainControl:false
+    }});
+  }catch(err){
+    toast("Mic blocked — you can still use ‘Upload a recording’.");
+    return;
+  }
+  busy=true;
+  audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') await audioCtx.resume();
+
+  // live visualiser
+  const src=audioCtx.createMediaStreamSource(stream);
+  const analyser=audioCtx.createAnalyser(); analyser.fftSize=1024;
+  src.connect(analyser);
+  orbBtn.classList.add('listening'); orbLbl.textContent="Listening";
+
+  // record raw audio
+  let rec, chunks=[];
+  const mime = pickMime();
+  try{ rec=new MediaRecorder(stream, mime?{mimeType:mime}:undefined); }
+  catch(_){ rec=new MediaRecorder(stream); }
+  rec.ondataavailable=(ev)=>{ if(ev.data.size) chunks.push(ev.data); };
+
+  const drawer=runWave(analyser);
+  let remain=Math.ceil(RECORD_MS/1000);
+  hint.textContent=`Listening… ${remain}s`;
+  const tick=setInterval(()=>{ remain--; if(remain>=0) hint.textContent=`Listening… ${remain}s`; },1000);
+
+  rec.onstop=async ()=>{
+    clearInterval(tick); cancelAnimationFrame(drawer.raf);
+    stream.getTracks().forEach(t=>t.stop());
+    orbBtn.classList.remove('listening'); orbBtn.classList.add('analyzing');
+    orbLbl.textContent="Reading…"; hint.textContent="Analyzing the cry…";
+    try{
+      const blob=new Blob(chunks,{type:mime||'audio/webm'});
+      const buf=await blob.arrayBuffer();
+      const audio=await audioCtx.decodeAudioData(buf);
+      finish(analyzeBuffer(audio));
+    }catch(err){
+      toast("Couldn't read that audio. Try again in a quieter spot.");
+      resetOrb();
+    }
+  };
+  rec.start();
+  setTimeout(()=>{ if(rec.state!=='inactive') rec.stop(); }, RECORD_MS);
+}
+
+function pickMime(){
+  const t=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
+  for(const m of t){ if(window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m; }
+  return "";
+}
+
+async function handleFile(file){
+  busy=true;
+  audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==='suspended') await audioCtx.resume();
+  orbBtn.classList.add('analyzing'); orbLbl.textContent="Reading…";
+  hint.textContent=`Analyzing “${file.name.slice(0,24)}”…`;
+  try{
+    const buf=await file.arrayBuffer();
+    const audio=await audioCtx.decodeAudioData(buf);
+    finish(analyzeBuffer(audio));
+  }catch(err){
+    toast("That file couldn't be decoded. Try a .wav, .mp3 or .m4a.");
+    resetOrb();
+  }
+}
+
+function resetOrb(){
+  busy=false;
+  orbBtn.classList.remove('listening','analyzing');
+  orbLbl.textContent="Listen"; hint.textContent="Best in a quiet room, close to baby";
+}
+
+/* live waveform drawn inside the orb */
+function runWave(analyser){
+  const ctx=waveCanvas.getContext('2d');
+  const N=analyser.fftSize, data=new Uint8Array(N);
+  const W=waveCanvas.width, H=waveCanvas.height;
+  const o={raf:0};
+  (function loop(){
+    o.raf=requestAnimationFrame(loop);
+    analyser.getByteTimeDomainData(data);
+    ctx.clearRect(0,0,W,H);
+    ctx.beginPath();
+    ctx.lineWidth=3; ctx.strokeStyle='rgba(58,35,10,.85)';
+    ctx.lineJoin='round';
+    const mid=H/2, pad=42, span=W-pad*2;
+    for(let i=0;i<N;i++){
+      const x=pad + (i/(N-1))*span;
+      const y=mid + (data[i]-128)/128 * (H*0.30);
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    }
+    ctx.stroke();
+  })();
+  return o;
+}
+
+/* ============================================================
+   Feature extraction  (real DSP on the decoded samples)
+   ============================================================ */
+function analyzeBuffer(audio){
+  const sr=audio.sampleRate;
+  // mono mix
+  let x=audio.getChannelData(0);
+  if(audio.numberOfChannels>1){
+    const y=audio.getChannelData(1), m=new Float32Array(x.length);
+    for(let i=0;i<x.length;i++) m[i]=0.5*(x[i]+y[i]); x=m;
+  }
+  // trim leading/trailing near-silence
+  x=trimSilence(x);
+  const dur=x.length/sr;
+
+  const frame=2048, hop=1024;
+  const win=hann(frame);
+  const re=new Float32Array(frame), im=new Float32Array(frame);
+
+  let f0s=[], cents=[], rolls=[], zcrs=[], rms=[];
+  for(let s=0; s+frame<=x.length; s+=hop){
+    // windowed frame
+    let e=0;
+    for(let i=0;i<frame;i++){ const v=x[s+i]; e+=v*v; re[i]=v*win[i]; im[i]=0; }
+    const r=Math.sqrt(e/frame); rms.push(r);
+    if(r<0.006){ continue; } // skip silent frames for spectral stats
+
+    // zero crossings on raw frame
+    let zc=0; for(let i=1;i<frame;i++){ if((x[s+i-1]<0)!==(x[s+i]<0)) zc++; }
+    zcrs.push(zc/frame);
+
+    // pitch via autocorrelation
+    const f0=autoCorrF0(x, s, frame, sr);
+    if(f0>0) f0s.push(f0);
+
+    // spectrum
+    fft(re,im);
+    const half=frame/2; let mag=new Float32Array(half), tot=0, wsum=0;
+    for(let k=0;k<half;k++){ const m=Math.hypot(re[k],im[k]); mag[k]=m; tot+=m; wsum+=m*(k*sr/frame); }
+    if(tot>1e-6){
+      cents.push(wsum/tot);
+      // rolloff 85%
+      let acc=0,roll=0; const lim=0.85*tot;
+      for(let k=0;k<half;k++){ acc+=mag[k]; if(acc>=lim){ roll=k*sr/frame; break; } }
+      rolls.push(roll);
+    }
+    // restore re/im are overwritten next loop
+  }
+
+  // envelope / rhythm from frame RMS
+  const env=rms;
+  const peak=Math.max(...env, 1e-6);
+  const thr=0.30*peak;
+  const fps=sr/hop; // frames per second
+  let bursts=[], gaps=[], cur=0, inBurst=false, gap=0;
+  let voiced=0;
+  for(let i=0;i<env.length;i++){
+    if(env[i]>=thr){ voiced++; if(!inBurst){inBurst=true;cur=0; if(gap>0){gaps.push(gap/fps);gap=0;}} cur++; }
+    else { if(inBurst){inBurst=false;bursts.push(cur/fps);} gap++; }
+  }
+  if(inBurst) bursts.push(cur/fps);
+
+  const mean=(a)=> a.length? a.reduce((p,c)=>p+c,0)/a.length : 0;
+  const std=(a)=>{ if(a.length<2) return 0; const m=mean(a); return Math.sqrt(mean(a.map(v=>(v-m)*(v-m)))); };
+
+  const meanGap=mean(gaps), gapVar=std(gaps);
+  const rhythmicity = gaps.length>=2 ? clamp(1 - gapVar/(meanGap+1e-6),0,1) : 0.25;
+  const burstRate = bursts.length / Math.max(dur,1);          // bursts per second
+  const dutyCycle = voiced/Math.max(env.length,1);
+
+  return {
+    dur,
+    meanF0: mean(f0s),
+    f0Var: std(f0s),
+    centroid: mean(cents),
+    rolloff: mean(rolls),
+    zcr: mean(zcrs),
+    loud: peak,
+    meanRMS: mean(env),
+    burstRate,
+    meanGap,
+    rhythmicity,
+    dutyCycle,
+    voicedFrames: f0s.length
+  };
+}
+
+function trimSilence(x){
+  const win=1024; let lo=0, hi=x.length;
+  const eAt=(s)=>{let e=0;for(let i=0;i<win&&s+i<x.length;i++)e+=x[s+i]*x[s+i];return Math.sqrt(e/win);};
+  let peak=0; for(let s=0;s<x.length;s+=win) peak=Math.max(peak,eAt(s));
+  const t=Math.max(0.01,0.12*peak);
+  for(let s=0;s<x.length;s+=win){ if(eAt(s)>t){lo=Math.max(0,s-win);break;} }
+  for(let s=x.length-win;s>0;s-=win){ if(eAt(s)>t){hi=Math.min(x.length,s+2*win);break;} }
+  return (hi>lo+win)? x.slice(lo,hi) : x;
+}
+
+function autoCorrF0(x, off, N, sr){
+  const minF=150, maxF=750;
+  const minLag=Math.floor(sr/maxF), maxLag=Math.floor(sr/minF);
+  let best=-1, bestLag=-1, e0=0;
+  for(let i=0;i<N;i++) e0+=x[off+i]*x[off+i];
+  if(e0<1e-4) return 0;
+  for(let lag=minLag; lag<=maxLag; lag++){
+    let s=0; for(let i=0;i+lag<N;i++) s+=x[off+i]*x[off+i+lag];
+    const norm=s/e0;
+    if(norm>best){ best=norm; bestLag=lag; }
+  }
+  if(best<0.30 || bestLag<=0) return 0;       // not clearly voiced
+  return sr/bestLag;
+}
+
+function hann(N){const w=new Float32Array(N);for(let i=0;i<N;i++)w[i]=0.5*(1-Math.cos(2*Math.PI*i/(N-1)));return w;}
+
+/* iterative radix-2 FFT, in place */
+function fft(re,im){
+  const n=re.length;
+  for(let i=1,j=0;i<n;i++){
+    let bit=n>>1;
+    for(;j&bit;bit>>=1) j^=bit;
+    j^=bit;
+    if(i<j){ [re[i],re[j]]=[re[j],re[i]]; [im[i],im[j]]=[im[j],im[i]]; }
+  }
+  for(let len=2;len<=n;len<<=1){
+    const ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(let i=0;i<n;i+=len){
+      let cr=1, ci=0;
+      for(let k=0;k<len/2;k++){
+        const ar=re[i+k], ai=im[i+k];
+        const br=re[i+k+len/2], bi=im[i+k+len/2];
+        const tr=br*cr-bi*ci, ti=br*ci+bi*cr;
+        re[i+k]=ar+tr; im[i+k]=ai+ti;
+        re[i+k+len/2]=ar-tr; im[i+k+len/2]=ai-ti;
+        const ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+      }
+    }
+  }
+}
+
+/* ============================================================
+   Classifier  (transparent, feature-weighted heuristic)
+   Grounded in documented acoustic signatures of cry types.
+   ============================================================ */
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const norm=(v,a,b)=>clamp((v-a)/(b-a),0,1);
+
+function classify(f, feverBoost){
+  if(f.voicedFrames < 3){
+    return {weak:true};
+  }
+  const nF0   = norm(f.meanF0, 250, 650);    // pitch height
+  const nBri  = norm(f.centroid, 900, 3200); // brightness / sharpness
+  const nZCR  = norm(f.zcr, 0.03, 0.16);     // breathiness / noisiness
+  const nLoud = norm(f.loud, 0.03, 0.40);    // intensity
+  const nRhy  = clamp(f.rhythmicity,0,1);    // regularity of pauses
+  const nBR   = norm(f.burstRate, 0.3, 1.8); // bursts/sec
+  const nGap  = norm(f.meanGap, 0.10, 0.80); // pause length
+  const nDuty = clamp(f.dutyCycle,0,1);      // how continuous
+
+  // each term contributes; we keep the parts for the "why" explanation
+  const parts = {
+    hungry: {
+      "a steady, repeating rhythm": 0.95*nRhy,
+      "clear pauses between cries": 0.65*nGap,
+      "a regular burst pattern":    0.60*nBR,
+      "a mid‑range pitch":          0.45*(1-Math.abs(nF0-0.45)*2),
+    },
+    discomfort: {
+      "a high, sharp pitch":        0.95*nF0,
+      "a bright, piercing tone":    0.70*nBri,
+      "high intensity":             0.65*nLoud,
+      "long, continuous wailing":   0.65*nDuty,
+      "little pause or rhythm":     0.45*(1-nRhy),
+    },
+    tired: {
+      "lower, softer energy":       0.85*(1-nLoud),
+      "a breathy, whiny texture":   0.65*nZCR,
+      "a lower pitch":              0.55*(1-nF0),
+      "a drawn‑out, nasal quality": 0.40*nDuty,
+    },
+    burp: {
+      "short, broken bursts":       0.65*nBR,
+      "grunty pauses":              0.60*nGap,
+      "moderate, fussy intensity":  0.45*(1-nLoud),
+      "an on‑and‑off pattern":      0.45*(1-nDuty),
+    },
+    comfort: {
+      "a gentle, on‑off fussing":   0.55*nBR,
+      "lower urgency":              0.55*(1-nLoud),
+      "a softer pitch":             0.50*(1-nF0),
+      "intermittent grizzling":     0.40*(1-nDuty),
+    },
+  };
+
+  const raw={};
+  for(const k of ORDER){ raw[k]=Object.values(parts[k]).reduce((p,c)=>p+c,0); }
+
+  // A baby with a measured fever is more likely crying from feeling unwell:
+  // give the discomfort hypothesis a transparent, bounded boost.
+  if(feverBoost){ raw.discomfort = raw.discomfort*1.45 + 0.45; }
+
+  // softmax (temperature keeps it honestly non‑absolute)
+  const T=0.42, vals=ORDER.map(k=>raw[k]/T), mx=Math.max(...vals);
+  const exps=vals.map(v=>Math.exp(v-mx)); const sum=exps.reduce((p,c)=>p+c,0);
+  const probs={}; ORDER.forEach((k,i)=> probs[k]=exps[i]/sum);
+
+  // cap top confidence — we are not a 99% oracle and won't pretend to be
+  const ranked=ORDER.slice().sort((a,b)=>probs[b]-probs[a]);
+  const top=ranked[0];
+  let topPct=Math.round(probs[top]*100);
+  topPct=Math.min(topPct, 86);
+
+  // build "why" chips from the strongest contributing cues of the winner
+  const why=Object.entries(parts[top]).sort((a,b)=>b[1]-a[1])
+            .filter(e=>e[1]>0.12).slice(0,3).map(e=>e[0]);
+
+  return {weak:false, top, topPct, probs, why, feverBoost:!!feverBoost};
+}
+
+/* ============================================================
+   Render
+   ============================================================ */
+function finish(feat){
+  const verdict = tempVerdict();
+  const feverish = verdict && (verdict.level==='fever'||verdict.level==='high'||verdict.level==='emergency');
+  const out=classify(feat, feverish);
+  if(out.weak){
+    toast("That sounded too quiet or too noisy to read — try again, closer and quieter.");
+    resetOrb(); return;
+  }
+  resetOrb();
+
+  renderTemp(verdict);
+
+  const c=CATS[out.top];
+  $('topEmoji').textContent=c.e;
+  $('topName').textContent=c.name;
+  $('topConf').textContent=out.topPct+"%";
+
+  const chips=$('chips'); chips.innerHTML="";
+  (out.why.length?out.why:["a general cry pattern"]).forEach(w=>{
+    const el=document.createElement('span'); el.className='chip'; el.textContent=w; chips.appendChild(el);
+  });
+  if(out.feverBoost){
+    const el=document.createElement('span'); el.className='chip adj';
+    el.textContent="weighted for the reported fever"; chips.appendChild(el);
+  }
+
+  const tips=$('tips'); tips.innerHTML="";
+  c.tips.forEach(t=>{const li=document.createElement('li');li.textContent=t;tips.appendChild(li);});
+
+  $('dur').textContent = (feat.dur>0? feat.dur.toFixed(1)+"s of cry · "+Math.round(feat.meanF0)+" Hz" : "");
+
+  const list=$('barList'); list.innerHTML="";
+  ORDER.slice().sort((a,b)=>out.probs[b]-out.probs[a]).forEach(k=>{
+    const pct=Math.round(out.probs[k]*100);
+    const row=document.createElement('div'); row.className='bar-row';
+    row.innerHTML=`<div class="name"><span class="e">${CATS[k].e}</span>${CATS[k].name}</div>
+      <div class="track"><div class="fill"></div></div>
+      <div class="pct">${pct}%</div>`;
+    list.appendChild(row);
+    requestAnimationFrame(()=>{ row.querySelector('.fill').style.width=Math.max(3,pct)+"%"; });
+  });
+
+  result.classList.add('show');
+  result.scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
