@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>BabyCry AI Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #1f2937;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: #f8fafc;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            padding: 24px 20px;
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.3;
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 700; position: relative; z-index: 1; }
+        .header p { font-size: 0.875rem; opacity: 0.9; margin-top: 4px; position: relative; z-index: 1; }
+        .status-bar {
+            background: #fff;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.875rem;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            transition: all 0.3s;
+        }
+        .status-dot.ready { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        .status-dot.training { background: #f59e0b; animation: pulse 1s infinite; }
+        .status-dot.analyzing { background: #3b82f6; animation: pulse 0.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .main-content { padding: 20px; }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            transition: transform 0.2s;
+        }
+        .card:active { transform: scale(0.98); }
+        .section-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .record-btn {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin: 0 auto;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .record-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        .record-btn:active::after { width: 300px; height: 300px; }
+        .record-btn:hover { transform: translateY(-2px); box-shadow: 0 20px 30px -5px rgba(99, 102, 241, 0.5); }
+        .record-btn.recording {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.4);
+            animation: recording-pulse 1.5s infinite;
+        }
+        @keyframes recording-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .record-btn svg { width: 32px; height: 32px; }
+        .timer {
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #6366f1;
+            margin-top: 12px;
+            font-variant-numeric: tabular-nums;
+        }
+        .input-group { margin-bottom: 16px; }
+        .input-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+        .temp-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            outline: none;
+        }
+        .temp-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+        }
+        .temp-display {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #6366f1;
+            margin-top: 8px;
+        }
+        .temp-display.fever { color: #ef4444; }
+        .camera-section {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .camera-section video, .camera-section img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .camera-placeholder {
+            color: #94a3b8;
+            text-align: center;
+            padding: 20px;
+        }
+        .camera-btn {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.9);
+            border: none;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .camera-btn:active { transform: translateX(-50%) scale(0.9); }
+        .camera-btn svg { width: 24px; height: 24px; color: #1e293b; }
+        .analyze-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.3s;
+            margin-top: 8px;
+        }
+        .analyze-btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .analyze-btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4); }
+        .results-container {
+            display: none;
+            animation: slideUp 0.5s ease-out;
+        }
+        .results-container.show { display: block; }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .result-main {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            border: 2px solid #bbf7d0;
+        }
+        .result-icon {
+            font-size: 3rem;
+            margin-bottom: 8px;
+        }
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #065f46;
+            margin-bottom: 4px;
+        }
+        .result-confidence {
+            font-size: 0.875rem;
+            color: #059669;
+            font-weight: 500;
+        }
+        .result-description {
+            font-size: 0.875rem;
+            color: #374151;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+        .probability-bars { margin-top: 16px; }
+        .prob-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 12px;
+        }
+        .prob-label {
+            width: 100px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            flex-shrink: 0;
+        }
+        .prob-bar-bg {
+            flex: 1;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .prob-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease-out;
+            width: 0%;
+        }
+        .prob-value {
+            width: 40px;
+            text-align: right;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            font-variant-numeric: tabular-nums;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .history-icon { font-size: 1.5rem; margin-right: 12px; }
+        .history-info { flex: 1; }
+        .history-title { font-weight: 600; font-size: 0.875rem; color: #1f2937; }
+        .history-time { font-size: 0.75rem; color: #6b7280; }
+        .history-conf { font-size: 0.75rem; font-weight: 600; color: #6366f1; }
+        .install-prompt {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #93c5fd;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+        .install-prompt.show { display: flex; }
+        .install-btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+        .waveform {
+            width: 100%;
+            height: 60px;
+            background: #f1f5f9;
+            border-radius: 12px;
+            margin-top: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .waveform-bar {
+            position: absolute;
+            bottom: 50%;
+            width: 4px;
+            background: linear-gradient(to top, #6366f1, #8b5cf6);
+            border-radius: 2px;
+            transform: translateY(50%);
+            transition: height 0.1s ease;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .loading-overlay.show { display: flex; }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #e2e8f0;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { margin-top: 16px; font-weight: 600; color: #6366f1; }
+        .tip-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            border-radius: 0 12px 12px 0;
+            font-size: 0.875rem;
+            color: #92400e;
+            margin-top: 12px;
+            display: none;
+        }
+        .tip-box.show { display: block; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>👶 BabyCry AI</h1>
+            <p>Intelligent Cry Analysis</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">Initializing AI Model...</span>
+        </div>
+
+        <div class="main-content">
+            <div class="install-prompt" id="installPrompt">
+                <span>📱</span>
+                <div style="flex:1">
+                    <div style="font-weight:600;font-size:0.875rem;">Install App</div>
+                    <div style="font-size:0.75rem;color:#475569;">Add to home screen for quick access</div>
+                </div>
+                <button class="install-btn" id="installBtn">Install</button>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <span>🎙️</span> Record Baby Cry
+                </div>
+                <button class="record-btn" id="recordBtn">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    <span id="recordBtnText">Hold to Record</span>
+                </button>
+                <div class="timer" id="timer">00:00</div>
+                <div class="waveform" id="waveform"></div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <span>🌡️</span> Temperature (Optional)
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Baby's current temperature</label>
+                    <input type="range" class="temp-slider" id="tempSlider" min="36" max="40" step="0.1" value="37">
+                    <div class="temp-display" id="tempDisplay">37.0°C</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="section-title">
+                    <span>📷</span> Visual Check (Optional)
+                </div>
+                <div class="camera-section" id="cameraSection">
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin:0 auto 8px"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                        <div>Tap camera to capture baby photo</div>
+                    </div>
+                    <video id="cameraVideo" autoplay playsinline style="display:none"></video>
+                    <img id="capturedImage" style="display:none">
+                    <button class="camera-btn" id="cameraBtn" style="display:none">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <button class="analyze-btn" id="analyzeBtn" disabled>
+                🔍 Analyze Cry
+            </button>
+
+            <div class="results-container" id="resultsContainer">
+                <div class="card">
+                    <div class="result-main" id="resultMain">
+                        <div class="result-icon" id="resultIcon">🤔</div>
+                        <div class="result-title" id="resultTitle">Analyzing...</div>
+                        <div class="result-confidence" id="resultConfidence">Confidence: 0%</div>
+                        <div class="result-description" id="resultDescription"></div>
+                    </div>
+                    <div class="tip-box" id="tipBox"></div>
+                    <div class="probability-bars" id="probabilityBars"></div>
+                </div>
+            </div>
+
+            <div class="card" id="historyCard" style="display:none">
+                <div class="section-title">
+                    <span>📋</span> Recent Analyses
+                </div>
+                <div id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Training AI Model...</div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURATION ====================
+        const CLASSES = ['Hungry', 'Sleepy', 'Discomfort/Gas', 'Pain/Colic', 'Fever', 'Diaper Change', 'Attention'];
+        const CLASS_CONFIG = {
+            'Hungry': { icon: '🍼', color: '#f59e0b', bg: '#fffbeb', border: '#fcd34d', desc: 'Baby is likely hungry. Try feeding soon.', tip: 'Offer breast or bottle. Rooting and hand-sucking are common signs.' },
+            'Sleepy': { icon: '😴', color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe', desc: 'Baby is overtired and needs sleep.', tip: 'Swaddle, dim lights, white noise, and gentle rocking can help.' },
+            'Discomfort/Gas': { icon: '💨', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0', desc: 'Gas or burping discomfort detected.', tip: 'Try burping, bicycle legs, tummy massage, or gas drops.' },
+            'Pain/Colic': { icon: '😣', color: '#ef4444', bg: '#fef2f2', border: '#fecaca', desc: 'High distress levels indicate pain or colic.', tip: 'Check for hair tourniquet, tight clothing, or consult pediatrician if persistent.' },
+            'Fever': { icon: '🤒', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', desc: 'Elevated temperature detected with weak cry.', tip: 'Verify with thermometer. Give fever reducer if >38°C and see doctor if >38.5°C.' },
+            'Diaper Change': { icon: '👶', color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe', desc: 'Likely needs a diaper change.', tip: 'Check diaper. Some babies are sensitive to wetness.' },
+            'Attention': { icon: '🧸', color: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8', desc: 'Baby wants to be held or played with.', tip: 'Skin-to-skin contact, talking, or a walk in stroller may help.' }
+        };
+
+        // ==================== STATE ====================
+        let model = null;
+        let audioContext = null;
+        let analyser = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let isRecording = false;
+        let recordStartTime = 0;
+        let recordTimer = null;
+        let audioFeatures = null;
+        let capturedImageData = null;
+        let stream = null;
+        let history = JSON.parse(localStorage.getItem('babyCryHistory') || '[]');
+        let deferredPrompt = null;
+
+        // ==================== DOM ELEMENTS ====================
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const recordBtn = document.getElementById('recordBtn');
+        const recordBtnText = document.getElementById('recordBtnText');
+        const timer = document.getElementById('timer');
+        const waveform = document.getElementById('waveform');
+        const tempSlider = document.getElementById('tempSlider');
+        const tempDisplay = document.getElementById('tempDisplay');
+        const cameraSection = document.getElementById('cameraSection');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const cameraVideo = document.getElementById('cameraVideo');
+        const capturedImage = document.getElementById('capturedImage');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingText = document.getElementById('loadingText');
+        const installPrompt = document.getElementById('installPrompt');
+        const installBtn = document.getElementById('installBtn');
+        const historyCard = document.getElementById('historyCard');
+        const historyList = document.getElementById('historyList');
+
+        // ==================== AUDIO FEATURE EXTRACTION ====================
+        async function extractAudioFeatures(audioBlob) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            const data = audioBuffer.getChannelData(0);
+            const sampleRate = audioBuffer.sampleRate;
+
+            const duration = data.length / sampleRate;
+
+            // RMS Energy
+            let sum = 0;
+            for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+            const rms = Math.sqrt(sum / data.length);
+
+            // Zero Crossing Rate
+            let zcr = 0;
+            for (let i = 1; i < data.length; i++) {
+                if ((data[i] >= 0) !== (data[i-1] >= 0)) zcr++;
+            }
+            zcr = zcr / (data.length - 1);
+
+            // Pitch estimation (autocorrelation)
+            const pitch = estimatePitch(data, sampleRate);
+
+            // Spectral Centroid approximation
+            let weightedSum = 0, magnitudeSum = 0;
+            const fftSize = 2048;
+            for (let i = 0; i < Math.min(data.length, fftSize); i++) {
+                const mag = Math.abs(data[i]);
+                weightedSum += i * mag;
+                magnitudeSum += mag;
+            }
+            const spectralCentroid = magnitudeSum > 0 ? weightedSum / magnitudeSum : 0;
+
+            // Rhythmicity (autocorrelation peak)
+            const rhythmicity = calculateRhythmicity(data);
+
+            // High frequency ratio (discomfort/pain has more high freq)
+            let highFreqEnergy = 0, totalEnergy = 0;
+            for (let i = 0; i < data.length; i++) {
+                const val = Math.abs(data[i]);
+                totalEnergy += val;
+                if (i > 0 && Math.abs(data[i] - data[i-1]) > 0.1) highFreqEnergy += val;
+            }
+            const highFreqRatio = totalEnergy > 0 ? highFreqEnergy / totalEnergy : 0;
+
+            // Cry intensity (peak amplitude)
+            let peak = 0;
+            for (let i = 0; i < data.length; i++) {
+                if (Math.abs(data[i]) > peak) peak = Math.abs(data[i]);
+            }
+
+            return {
+                duration: Math.min(duration, 10) / 10,
+                rms: Math.min(rms * 5, 1),
+                zcr: Math.min(zcr * 10, 1),
+                pitch: Math.min(pitch / 600, 1),
+                spectralCentroid: Math.min(spectralCentroid / 1000, 1),
+                rhythmicity: rhythmicity,
+                highFreqRatio: highFreqRatio,
+                peak: peak,
+                temp: parseFloat(tempSlider.value)
+            };
+        }
+
+        function estimatePitch(buffer, sampleRate) {
+            const maxSamples = 2000;
+            const buf = buffer.slice(0, Math.min(buffer.length, maxSamples * 2));
+            let bestOffset = -1;
+            let bestCorrelation = 0;
+            const rms = Math.sqrt(buf.reduce((a, b) => a + b * b, 0) / buf.length);
+            if (rms < 0.01) return 0;
+
+            for (let offset = 20; offset < 800; offset++) {
+                let correlation = 0;
+                for (let i = 0; i < maxSamples; i++) {
+                    correlation += Math.abs(buf[i] - buf[i + offset]);
+                }
+                correlation = 1 - (correlation / maxSamples);
+                if (correlation > bestCorrelation) {
+                    bestCorrelation = correlation;
+                    bestOffset = offset;
+                }
+            }
+            return bestOffset > 0 ? sampleRate / bestOffset : 0;
+        }
+
+        function calculateRhythmicity(buffer) {
+            const segmentSize = Math.floor(buffer.length / 10);
+            let pattern = 0;
+            for (let i = 0; i < 9; i++) {
+                let sum1 = 0, sum2 = 0;
+                for (let j = 0; j < segmentSize; j++) {
+                    sum1 += Math.abs(buffer[i * segmentSize + j]);
+                    sum2 += Math.abs(buffer[(i + 1) * segmentSize + j]);
+                }
+                pattern += 1 - Math.abs(sum1 - sum2) / Math.max(sum1 + sum2, 0.001);
+            }
+            return pattern / 9;
+        }
+
+        // ==================== TENSORFLOW MODEL ====================
+        async function createAndTrainModel() {
+            statusDot.className = 'status-dot training';
+            statusText.textContent = 'Training AI Model...';
+            loadingOverlay.classList.add('show');
+
+            // Create model
+            model = tf.sequential({
+                layers: [
+                    tf.layers.dense({ inputShape: [9], units: 32, activation: 'relu' }),
+                    tf.layers.dropout({ rate: 0.2 }),
+                    tf.layers.dense({ units: 24, activation: 'relu' }),
+                    tf.layers.dropout({ rate: 0.2 }),
+                    tf.layers.dense({ units: 16, activation: 'relu' }),
+                    tf.layers.dense({ units: CLASSES.length, activation: 'softmax' })
+                ]
+            });
+
+            model.compile({
+                optimizer: tf.train.adam(0.001),
+                loss: 'categoricalCrossentropy',
+                metrics: ['accuracy']
+            });
+
+            // Generate synthetic training data based on cry characteristics
+            const numSamples = 2000;
+            const xs = [];
+            const ys = [];
+
+            for (let i = 0; i < numSamples; i++) {
+                const label = i % CLASSES.length;
+                const features = generateSyntheticFeatures(label);
+                xs.push(features);
+                const y = new Array(CLASSES.length).fill(0);
+                y[label] = 1;
+                ys.push(y);
+            }
+
+            const xsTensor = tf.tensor2d(xs);
+            const ysTensor = tf.tensor2d(ys);
+
+            await model.fit(xsTensor, ysTensor, {
+                epochs: 60,
+                batchSize: 32,
+                shuffle: true,
+                verbose: 0,
+                callbacks: {
+                    onEpochEnd: (epoch) => {
+                        if (epoch % 10 === 0) {
+                            loadingText.textContent = `Training AI Model... ${Math.round((epoch / 60) * 100)}%`;
+                        }
+                    }
+                }
+            });
+
+            xsTensor.dispose();
+            ysTensor.dispose();
+
+            loadingOverlay.classList.remove('show');
+            statusDot.className = 'status-dot ready';
+            statusText.textContent = 'AI Ready - Record baby cry';
+        }
+
+        function generateSyntheticFeatures(label) {
+            const rand = () => Math.random();
+            const n = () => (Math.random() - 0.5) * 0.2; // noise
+
+            switch(label) {
+                case 0: // Hungry
+                    return [
+                        0.4 + n(), 0.5 + n(), 0.3 + n(), 0.45 + n(), 0.4 + n(),
+                        0.7 + n(), 0.3 + n(), 0.6 + n(), 0.5 + n()
+                    ];
+                case 1: // Sleepy
+                    return [
+                        0.6 + n(), 0.2 + n(), 0.2 + n(), 0.25 + n(), 0.3 + n(),
+                        0.3 + n(), 0.2 + n(), 0.3 + n(), 0.5 + n()
+                    ];
+                case 2: // Discomfort/Gas
+                    return [
+                        0.3 + n(), 0.6 + n(), 0.7 + n(), 0.35 + n(), 0.5 + n(),
+                        0.2 + n(), 0.6 + n(), 0.5 + n(), 0.5 + n()
+                    ];
+                case 3: // Pain
+                    return [
+                        0.7 + n(), 0.8 + n(), 0.5 + n(), 0.8 + n(), 0.7 + n(),
+                        0.2 + n(), 0.7 + n(), 0.9 + n(), 0.5 + n()
+                    ];
+                case 4: // Fever
+                    return [
+                        0.5 + n(), 0.3 + n(), 0.4 + n(), 0.6 + n(), 0.5 + n(),
+                        0.4 + n(), 0.5 + n(), 0.4 + n(), 0.8 + n() + (Math.random() * 0.2)
+                    ];
+                case 5: // Diaper
+                    return [
+                        0.2 + n(), 0.4 + n(), 0.3 + n(), 0.4 + n(), 0.35 + n(),
+                        0.6 + n(), 0.3 + n(), 0.4 + n(), 0.5 + n()
+                    ];
+                case 6: // Attention
+                    return [
+                        0.3 + n(), 0.3 + n(), 0.4 + n(), 0.3 + n(), 0.4 + n(),
+                        0.5 + n(), 0.4 + n(), 0.3 + n(), 0.5 + n()
+                    ];
+                default:
+                    return [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5];
+            }
+        }
+
+        // ==================== RECORDING ====================
+        async function startRecording() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+
+                mediaRecorder = new MediaRecorder(stream);
+                recordedChunks = [];
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.start(100);
+                isRecording = true;
+                recordStartTime = Date.now();
+                recordBtn.classList.add('recording');
+                recordBtnText.textContent = 'Recording...';
+                analyzeBtn.disabled = true;
+
+                // Visualizer
+                visualize();
+
+                // Timer
+                recordTimer = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
+                    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                    const secs = (elapsed % 60).toString().padStart(2, '0');
+                    timer.textContent = `${mins}:${secs}`;
+
+                    if (elapsed >= 10) {
+                        stopRecording();
+                    }
+                }, 100);
+
+            } catch (err) {
+                alert('Microphone access required: ' + err.message);
+            }
+        }
+
+        function stopRecording() {
+            if (!isRecording) return;
+            isRecording = false;
+            clearInterval(recordTimer);
+            recordBtn.classList.remove('recording');
+            recordBtnText.textContent = 'Hold to Record';
+
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+            }
+
+            analyzeBtn.disabled = recordedChunks.length === 0;
+            statusText.textContent = recordedChunks.length > 0 ? 'Cry recorded - Ready to analyze' : 'Recording failed';
+        }
+
+        function visualize() {
+            if (!isRecording) {
+                waveform.innerHTML = '';
+                return;
+            }
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            waveform.innerHTML = '';
+            const barWidth = waveform.clientWidth / bufferLength;
+            for (let i = 0; i < bufferLength; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'waveform-bar';
+                bar.style.left = `${i * barWidth}px`;
+                bar.style.width = `${Math.max(barWidth - 1, 2)}px`;
+                bar.style.height = `${(dataArray[i] / 255) * 100}%`;
+                waveform.appendChild(bar);
+            }
+            requestAnimationFrame(visualize);
+        }
+
+        // ==================== CAMERA ====================
+        let cameraStream = null;
+        let cameraActive = false;
+
+        async function startCamera() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                cameraVideo.srcObject = cameraStream;
+                cameraVideo.style.display = 'block';
+                cameraPlaceholder.style.display = 'none';
+                capturedImage.style.display = 'none';
+                cameraBtn.style.display = 'flex';
+                cameraActive = true;
+            } catch (err) {
+                alert('Camera access required: ' + err.message);
+            }
+        }
+
+        function capturePhoto() {
+            const canvas = document.createElement('canvas');
+            canvas.width = cameraVideo.videoWidth;
+            canvas.height = cameraVideo.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(cameraVideo, 0, 0);
+            capturedImageData = canvas.toDataURL('image/jpeg');
+            capturedImage.src = capturedImageData;
+            capturedImage.style.display = 'block';
+            cameraVideo.style.display = 'none';
+            cameraBtn.style.display = 'none';
+
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+            }
+            cameraActive = false;
+        }
+
+        // ==================== ANALYSIS ====================
+        async function analyzeCry() {
+            if (!model || recordedChunks.length === 0) return;
+
+            loadingOverlay.classList.add('show');
+            loadingText.textContent = 'Analyzing cry patterns...';
+            statusText.textContent = 'Analyzing...';
+            statusDot.className = 'status-dot analyzing';
+
+            const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+
+            try {
+                audioFeatures = await extractAudioFeatures(audioBlob);
+
+                // Normalize temperature feature
+                const temp = parseFloat(tempSlider.value);
+                const tempNorm = Math.max(0, Math.min(1, (temp - 36) / 4));
+
+                const inputVector = [
+                    audioFeatures.duration,
+                    audioFeatures.rms,
+                    audioFeatures.zcr,
+                    audioFeatures.pitch,
+                    audioFeatures.spectralCentroid,
+                    audioFeatures.rhythmicity,
+                    audioFeatures.highFreqRatio,
+                    audioFeatures.peak,
+                    tempNorm
+                ];
+
+                const inputTensor = tf.tensor2d([inputVector]);
+                const prediction = model.predict(inputTensor);
+                const probs = await prediction.data();
+                inputTensor.dispose();
+                prediction.dispose();
+
+                // Apply temperature bias for fever
+                let finalProbs = Array.from(probs);
+                if (temp >= 37.8) {
+                    finalProbs[4] = Math.max(finalProbs[4], 0.3 + (temp - 37.8) * 0.3);
+                    // Renormalize
+                    const sum = finalProbs.reduce((a,b) => a+b, 0);
+                    finalProbs = finalProbs.map(p => p / sum);
+                }
+
+                displayResults(finalProbs);
+                saveToHistory(finalProbs);
+
+                statusDot.className = 'status-dot ready';
+                statusText.textContent = 'Analysis complete';
+
+            } catch (err) {
+                console.error(err);
+                alert('Analysis error: ' + err.message);
+                statusText.textContent = 'Analysis failed';
+            }
+
+            loadingOverlay.classList.remove('show');
+        }
+
+        function displayResults(probabilities) {
+            const maxIndex = probabilities.indexOf(Math.max(...probabilities));
+            const predictedClass = CLASSES[maxIndex];
+            const confidence = Math.round(probabilities[maxIndex] * 100);
+            const config = CLASS_CONFIG[predictedClass];
+
+            resultIcon.textContent = config.icon;
+            resultTitle.textContent = predictedClass;
+            resultConfidence.textContent = `Confidence: ${confidence}%`;
+            resultDescription.textContent = config.desc;
+
+            const resultMain = document.getElementById('resultMain');
+            resultMain.style.background = config.bg;
+            resultMain.style.borderColor = config.border;
+            resultTitle.style.color = config.color;
+            resultConfidence.style.color = config.color;
+
+            const tipBox = document.getElementById('tipBox');
+            tipBox.textContent = '💡 ' + config.tip;
+            tipBox.classList.add('show');
+
+            // Probability bars
+            const barsContainer = document.getElementById('probabilityBars');
+            barsContainer.innerHTML = '<div class="section-title" style="margin-top:0"><span>📊</span>All Probabilities</div>';
+
+            const sortedIndices = probabilities.map((p, i) => ({p, i})).sort((a, b) => b.p - a.p);
+
+            sortedIndices.forEach(({p, i}, idx) => {
+                const cls = CLASSES[i];
+                const conf = CLASS_CONFIG[cls];
+                const pct = Math.round(p * 100);
+
+                const item = document.createElement('div');
+                item.className = 'prob-item';
+                item.innerHTML = `
+                    <div class="prob-label">${conf.icon} ${cls}</div>
+                    <div class="prob-bar-bg"><div class="prob-bar-fill" style="background:${conf.color};width:0%"></div></div>
+                    <div class="prob-value">${pct}%</div>
+                `;
+                barsContainer.appendChild(item);
+
+                setTimeout(() => {
+                    item.querySelector('.prob-bar-fill').style.width = pct + '%';
+                }, 100 + idx * 100);
+            });
+
+            resultsContainer.classList.add('show');
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function saveToHistory(probabilities) {
+            const maxIndex = probabilities.indexOf(Math.max(...probabilities));
+            const entry = {
+                class: CLASSES[maxIndex],
+                confidence: Math.round(probabilities[maxIndex] * 100),
+                time: new Date().toLocaleString(),
+                temp: tempSlider.value
+            };
+            history.unshift(entry);
+            if (history.length > 10) history.pop();
+            localStorage.setItem('babyCryHistory', JSON.stringify(history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            if (history.length === 0) {
+                historyCard.style.display = 'none';
+                return;
+            }
+            historyCard.style.display = 'block';
+            historyList.innerHTML = history.map(h => {
+                const conf = CLASS_CONFIG[h.class];
+                return `
+                    <div class="history-item">
+                        <div class="history-icon">${conf.icon}</div>
+                        <div class="history-info">
+                            <div class="history-title">${h.class}</div>
+                            <div class="history-time">${h.time} · ${h.temp}°C</div>
+                        </div>
+                        <div class="history-conf">${h.confidence}%</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        recordBtn.addEventListener('mousedown', startRecording);
+        recordBtn.addEventListener('mouseup', stopRecording);
+        recordBtn.addEventListener('mouseleave', stopRecording);
+        recordBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+        recordBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+
+        tempSlider.addEventListener('input', () => {
+            const val = parseFloat(tempSlider.value).toFixed(1);
+            tempDisplay.textContent = val + '°C';
+            tempDisplay.classList.toggle('fever', parseFloat(val) >= 37.8);
+        });
+
+        cameraSection.addEventListener('click', () => {
+            if (!cameraActive && !capturedImageData) startCamera();
+        });
+        cameraBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            capturePhoto();
+        });
+
+        analyzeBtn.addEventListener('click', analyzeCry);
+
+        // PWA Install
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installPrompt.classList.add('show');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                installPrompt.classList.remove('show');
+            }
+            deferredPrompt = null;
+        });
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:text/javascript,' + encodeURIComponent(`
+                self.addEventListener('install', e => self.skipWaiting());
+                self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
+                self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => new Response('Offline'))));
+            `)).catch(() => {});
+        }
+
+        // Initialize
+        renderHistory();
+        createAndTrainModel();
+    </script>
+</body>
+</html>
