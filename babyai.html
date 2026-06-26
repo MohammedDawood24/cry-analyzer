@@ -3,36 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#6366f1">
+    <meta name="theme-color" content="#0f172a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>BabyCry AI Analyzer</title>
+    <title>BabyCry AI Analyzer - Dark</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #0b0f19;
             min-height: 100vh;
-            color: #1f2937;
+            color: #e2e8f0;
             -webkit-tap-highlight-color: transparent;
         }
         .app-container {
             max-width: 480px;
             margin: 0 auto;
             min-height: 100vh;
-            background: #f8fafc;
+            background: #0f172a;
             position: relative;
             overflow-x: hidden;
         }
         .header {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
             padding: 24px 20px;
-            color: white;
+            color: #f8fafc;
             text-align: center;
             position: relative;
             overflow: hidden;
+            border-bottom: 1px solid #312e81;
         }
         .header::before {
             content: '';
@@ -41,46 +42,49 @@
             left: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background: radial-gradient(circle, rgba(99,102,241,0.15) 1px, transparent 1px);
             background-size: 20px 20px;
-            opacity: 0.3;
+            opacity: 0.4;
         }
         .header h1 { font-size: 1.5rem; font-weight: 700; position: relative; z-index: 1; }
-        .header p { font-size: 0.875rem; opacity: 0.9; margin-top: 4px; position: relative; z-index: 1; }
+        .header p { font-size: 0.875rem; opacity: 0.8; margin-top: 4px; position: relative; z-index: 1; color: #a5b4fc; }
         .status-bar {
-            background: #fff;
+            background: #1e293b;
             padding: 12px 20px;
             display: flex;
             align-items: center;
             gap: 10px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #334155;
             font-size: 0.875rem;
+            color: #94a3b8;
         }
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #cbd5e1;
+            background: #475569;
             transition: all 0.3s;
         }
-        .status-dot.ready { background: #10b981; box-shadow: 0 0 8px #10b981; }
-        .status-dot.training { background: #f59e0b; animation: pulse 1s infinite; }
-        .status-dot.analyzing { background: #3b82f6; animation: pulse 0.5s infinite; }
+        .status-dot.ready { background: #34d399; box-shadow: 0 0 8px #34d399; }
+        .status-dot.training { background: #fbbf24; animation: pulse 1s infinite; }
+        .status-dot.analyzing { background: #60a5fa; animation: pulse 0.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .main-content { padding: 20px; }
         .card {
-            background: white;
+            background: #1e293b;
             border-radius: 20px;
             padding: 24px;
             margin-bottom: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
-            transition: transform 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3), 0 2px 4px -1px rgba(0,0,0,0.2);
+            border: 1px solid #334155;
+            transition: transform 0.2s, border-color 0.2s;
         }
         .card:active { transform: scale(0.98); }
+        .card:hover { border-color: #475569; }
         .section-title {
             font-size: 0.875rem;
             font-weight: 600;
-            color: #64748b;
+            color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-bottom: 16px;
@@ -93,8 +97,8 @@
             height: 140px;
             border-radius: 50%;
             border: none;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
+            background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%);
+            color: #fff;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
@@ -124,7 +128,7 @@
         .record-btn:active::after { width: 300px; height: 300px; }
         .record-btn:hover { transform: translateY(-2px); box-shadow: 0 20px 30px -5px rgba(99, 102, 241, 0.5); }
         .record-btn.recording {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
             box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.4);
             animation: recording-pulse 1.5s infinite;
         }
@@ -138,7 +142,7 @@
             text-align: center;
             font-size: 1.25rem;
             font-weight: 700;
-            color: #6366f1;
+            color: #818cf8;
             margin-top: 12px;
             font-variant-numeric: tabular-nums;
         }
@@ -147,7 +151,7 @@
             display: block;
             font-size: 0.875rem;
             font-weight: 500;
-            color: #374151;
+            color: #cbd5e1;
             margin-bottom: 6px;
         }
         .temp-slider {
@@ -155,7 +159,7 @@
             -webkit-appearance: none;
             height: 8px;
             border-radius: 4px;
-            background: #e2e8f0;
+            background: #334155;
             outline: none;
         }
         .temp-slider::-webkit-slider-thumb {
@@ -163,28 +167,29 @@
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #6366f1, #818cf8);
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+            box-shadow: 0 2px 6px rgba(99,102,241,0.4);
         }
         .temp-display {
             text-align: center;
             font-size: 1.5rem;
             font-weight: 700;
-            color: #6366f1;
+            color: #818cf8;
             margin-top: 8px;
         }
-        .temp-display.fever { color: #ef4444; }
+        .temp-display.fever { color: #f87171; }
         .camera-section {
             position: relative;
             width: 100%;
             aspect-ratio: 4/3;
-            background: #1e293b;
+            background: #0f172a;
             border-radius: 16px;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
+            border: 1px solid #334155;
         }
         .camera-section video, .camera-section img {
             width: 100%;
@@ -192,7 +197,7 @@
             object-fit: cover;
         }
         .camera-placeholder {
-            color: #94a3b8;
+            color: #64748b;
             text-align: center;
             padding: 20px;
         }
@@ -201,8 +206,8 @@
             bottom: 16px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255,255,255,0.9);
-            border: none;
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid #475569;
             width: 56px;
             height: 56px;
             border-radius: 50%;
@@ -210,18 +215,18 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
             transition: transform 0.2s;
         }
         .camera-btn:active { transform: translateX(-50%) scale(0.9); }
-        .camera-btn svg { width: 24px; height: 24px; color: #1e293b; }
+        .camera-btn svg { width: 24px; height: 24px; color: #e2e8f0; }
         .analyze-btn {
             width: 100%;
             padding: 16px;
             border: none;
             border-radius: 16px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
+            background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            color: #fff;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
@@ -230,7 +235,8 @@
             margin-top: 8px;
         }
         .analyze-btn:disabled {
-            background: #cbd5e1;
+            background: #334155;
+            color: #64748b;
             cursor: not-allowed;
             box-shadow: none;
         }
@@ -247,10 +253,10 @@
         .result-main {
             text-align: center;
             padding: 24px;
-            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            background: #0f172a;
             border-radius: 16px;
             margin-bottom: 16px;
-            border: 2px solid #bbf7d0;
+            border: 2px solid #334155;
         }
         .result-icon {
             font-size: 3rem;
@@ -259,17 +265,17 @@
         .result-title {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #065f46;
+            color: #f8fafc;
             margin-bottom: 4px;
         }
         .result-confidence {
             font-size: 0.875rem;
-            color: #059669;
+            color: #818cf8;
             font-weight: 500;
         }
         .result-description {
             font-size: 0.875rem;
-            color: #374151;
+            color: #94a3b8;
             margin-top: 8px;
             line-height: 1.5;
         }
@@ -284,13 +290,13 @@
             width: 100px;
             font-size: 0.875rem;
             font-weight: 500;
-            color: #374151;
+            color: #e2e8f0;
             flex-shrink: 0;
         }
         .prob-bar-bg {
             flex: 1;
             height: 8px;
-            background: #e2e8f0;
+            background: #334155;
             border-radius: 4px;
             overflow: hidden;
         }
@@ -305,26 +311,26 @@
             text-align: right;
             font-size: 0.875rem;
             font-weight: 600;
-            color: #64748b;
+            color: #94a3b8;
             font-variant-numeric: tabular-nums;
         }
         .history-item {
             display: flex;
             align-items: center;
             padding: 12px;
-            background: #f8fafc;
+            background: #0f172a;
             border-radius: 12px;
             margin-bottom: 8px;
-            border: 1px solid #e2e8f0;
+            border: 1px solid #334155;
         }
         .history-icon { font-size: 1.5rem; margin-right: 12px; }
         .history-info { flex: 1; }
-        .history-title { font-weight: 600; font-size: 0.875rem; color: #1f2937; }
-        .history-time { font-size: 0.75rem; color: #6b7280; }
-        .history-conf { font-size: 0.75rem; font-weight: 600; color: #6366f1; }
+        .history-title { font-weight: 600; font-size: 0.875rem; color: #f1f5f9; }
+        .history-time { font-size: 0.75rem; color: #64748b; }
+        .history-conf { font-size: 0.75rem; font-weight: 600; color: #818cf8; }
         .install-prompt {
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border: 1px solid #93c5fd;
+            background: #1e293b;
+            border: 1px solid #475569;
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
@@ -334,7 +340,7 @@
         }
         .install-prompt.show { display: flex; }
         .install-btn {
-            background: #2563eb;
+            background: #6366f1;
             color: white;
             border: none;
             padding: 8px 16px;
@@ -342,21 +348,24 @@
             font-weight: 600;
             font-size: 0.875rem;
             cursor: pointer;
+            transition: background 0.2s;
         }
+        .install-btn:hover { background: #818cf8; }
         .waveform {
             width: 100%;
             height: 60px;
-            background: #f1f5f9;
+            background: #0f172a;
             border-radius: 12px;
             margin-top: 12px;
             position: relative;
             overflow: hidden;
+            border: 1px solid #334155;
         }
         .waveform-bar {
             position: absolute;
             bottom: 50%;
             width: 4px;
-            background: linear-gradient(to top, #6366f1, #8b5cf6);
+            background: linear-gradient(to top, #6366f1, #a78bfa);
             border-radius: 2px;
             transform: translateY(50%);
             transition: height 0.1s ease;
@@ -364,7 +373,7 @@
         .loading-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255,255,255,0.9);
+            background: rgba(15, 23, 42, 0.95);
             display: none;
             align-items: center;
             justify-content: center;
@@ -375,20 +384,20 @@
         .spinner {
             width: 48px;
             height: 48px;
-            border: 4px solid #e2e8f0;
-            border-top-color: #6366f1;
+            border: 4px solid #334155;
+            border-top-color: #818cf8;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .loading-text { margin-top: 16px; font-weight: 600; color: #6366f1; }
+        .loading-text { margin-top: 16px; font-weight: 600; color: #818cf8; }
         .tip-box {
-            background: #fef3c7;
+            background: #1e293b;
             border-left: 4px solid #f59e0b;
             padding: 12px;
             border-radius: 0 12px 12px 0;
             font-size: 0.875rem;
-            color: #92400e;
+            color: #fcd34d;
             margin-top: 12px;
             display: none;
         }
@@ -412,8 +421,8 @@
             <div class="install-prompt" id="installPrompt">
                 <span>📱</span>
                 <div style="flex:1">
-                    <div style="font-weight:600;font-size:0.875rem;">Install App</div>
-                    <div style="font-size:0.75rem;color:#475569;">Add to home screen for quick access</div>
+                    <div style="font-weight:600;font-size:0.875rem;color:#e2e8f0;">Install App</div>
+                    <div style="font-size:0.75rem;color:#94a3b8;">Add to home screen for quick access</div>
                 </div>
                 <button class="install-btn" id="installBtn">Install</button>
             </div>
@@ -490,19 +499,17 @@
     </div>
 
     <script>
-        // ==================== CONFIGURATION ====================
         const CLASSES = ['Hungry', 'Sleepy', 'Discomfort/Gas', 'Pain/Colic', 'Fever', 'Diaper Change', 'Attention'];
         const CLASS_CONFIG = {
-            'Hungry': { icon: '🍼', color: '#f59e0b', bg: '#fffbeb', border: '#fcd34d', desc: 'Baby is likely hungry. Try feeding soon.', tip: 'Offer breast or bottle. Rooting and hand-sucking are common signs.' },
-            'Sleepy': { icon: '😴', color: '#6366f1', bg: '#eef2ff', border: '#c7d2fe', desc: 'Baby is overtired and needs sleep.', tip: 'Swaddle, dim lights, white noise, and gentle rocking can help.' },
-            'Discomfort/Gas': { icon: '💨', color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0', desc: 'Gas or burping discomfort detected.', tip: 'Try burping, bicycle legs, tummy massage, or gas drops.' },
-            'Pain/Colic': { icon: '😣', color: '#ef4444', bg: '#fef2f2', border: '#fecaca', desc: 'High distress levels indicate pain or colic.', tip: 'Check for hair tourniquet, tight clothing, or consult pediatrician if persistent.' },
-            'Fever': { icon: '🤒', color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', desc: 'Elevated temperature detected with weak cry.', tip: 'Verify with thermometer. Give fever reducer if >38°C and see doctor if >38.5°C.' },
-            'Diaper Change': { icon: '👶', color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe', desc: 'Likely needs a diaper change.', tip: 'Check diaper. Some babies are sensitive to wetness.' },
-            'Attention': { icon: '🧸', color: '#ec4899', bg: '#fdf2f8', border: '#fbcfe8', desc: 'Baby wants to be held or played with.', tip: 'Skin-to-skin contact, talking, or a walk in stroller may help.' }
+            'Hungry': { icon: '🍼', color: '#fbbf24', bg: '#1e293b', border: '#fbbf24', desc: 'Baby is likely hungry. Try feeding soon.', tip: 'Offer breast or bottle. Rooting and hand-sucking are common signs.' },
+            'Sleepy': { icon: '😴', color: '#818cf8', bg: '#1e293b', border: '#818cf8', desc: 'Baby is overtired and needs sleep.', tip: 'Swaddle, dim lights, white noise, and gentle rocking can help.' },
+            'Discomfort/Gas': { icon: '💨', color: '#34d399', bg: '#1e293b', border: '#34d399', desc: 'Gas or burping discomfort detected.', tip: 'Try burping, bicycle legs, tummy massage, or gas drops.' },
+            'Pain/Colic': { icon: '😣', color: '#f87171', bg: '#1e293b', border: '#f87171', desc: 'High distress levels indicate pain or colic.', tip: 'Check for hair tourniquet, tight clothing, or consult pediatrician if persistent.' },
+            'Fever': { icon: '🤒', color: '#ef4444', bg: '#1e293b', border: '#ef4444', desc: 'Elevated temperature detected with weak cry.', tip: 'Verify with thermometer. Give fever reducer if >38°C and see doctor if >38.5°C.' },
+            'Diaper Change': { icon: '👶', color: '#a78bfa', bg: '#1e293b', border: '#a78bfa', desc: 'Likely needs a diaper change.', tip: 'Check diaper. Some babies are sensitive to wetness.' },
+            'Attention': { icon: '🧸', color: '#f472b6', bg: '#1e293b', border: '#f472b6', desc: 'Baby wants to be held or played with.', tip: 'Skin-to-skin contact, talking, or a walk in stroller may help.' }
         };
 
-        // ==================== STATE ====================
         let model = null;
         let audioContext = null;
         let analyser = null;
@@ -517,7 +524,6 @@
         let history = JSON.parse(localStorage.getItem('babyCryHistory') || '[]');
         let deferredPrompt = null;
 
-        // ==================== DOM ELEMENTS ====================
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const recordBtn = document.getElementById('recordBtn');
@@ -540,32 +546,22 @@
         const historyCard = document.getElementById('historyCard');
         const historyList = document.getElementById('historyList');
 
-        // ==================== AUDIO FEATURE EXTRACTION ====================
         async function extractAudioFeatures(audioBlob) {
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const arrayBuffer = await audioBlob.arrayBuffer();
             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             const data = audioBuffer.getChannelData(0);
             const sampleRate = audioBuffer.sampleRate;
-
             const duration = data.length / sampleRate;
-
-            // RMS Energy
             let sum = 0;
             for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
             const rms = Math.sqrt(sum / data.length);
-
-            // Zero Crossing Rate
             let zcr = 0;
             for (let i = 1; i < data.length; i++) {
                 if ((data[i] >= 0) !== (data[i-1] >= 0)) zcr++;
             }
             zcr = zcr / (data.length - 1);
-
-            // Pitch estimation (autocorrelation)
             const pitch = estimatePitch(data, sampleRate);
-
-            // Spectral Centroid approximation
             let weightedSum = 0, magnitudeSum = 0;
             const fftSize = 2048;
             for (let i = 0; i < Math.min(data.length, fftSize); i++) {
@@ -574,11 +570,7 @@
                 magnitudeSum += mag;
             }
             const spectralCentroid = magnitudeSum > 0 ? weightedSum / magnitudeSum : 0;
-
-            // Rhythmicity (autocorrelation peak)
             const rhythmicity = calculateRhythmicity(data);
-
-            // High frequency ratio (discomfort/pain has more high freq)
             let highFreqEnergy = 0, totalEnergy = 0;
             for (let i = 0; i < data.length; i++) {
                 const val = Math.abs(data[i]);
@@ -586,13 +578,10 @@
                 if (i > 0 && Math.abs(data[i] - data[i-1]) > 0.1) highFreqEnergy += val;
             }
             const highFreqRatio = totalEnergy > 0 ? highFreqEnergy / totalEnergy : 0;
-
-            // Cry intensity (peak amplitude)
             let peak = 0;
             for (let i = 0; i < data.length; i++) {
                 if (Math.abs(data[i]) > peak) peak = Math.abs(data[i]);
             }
-
             return {
                 duration: Math.min(duration, 10) / 10,
                 rms: Math.min(rms * 5, 1),
@@ -613,7 +602,6 @@
             let bestCorrelation = 0;
             const rms = Math.sqrt(buf.reduce((a, b) => a + b * b, 0) / buf.length);
             if (rms < 0.01) return 0;
-
             for (let offset = 20; offset < 800; offset++) {
                 let correlation = 0;
                 for (let i = 0; i < maxSamples; i++) {
@@ -642,13 +630,11 @@
             return pattern / 9;
         }
 
-        // ==================== TENSORFLOW MODEL ====================
         async function createAndTrainModel() {
             statusDot.className = 'status-dot training';
             statusText.textContent = 'Training AI Model...';
             loadingOverlay.classList.add('show');
 
-            // Create model
             model = tf.sequential({
                 layers: [
                     tf.layers.dense({ inputShape: [9], units: 32, activation: 'relu' }),
@@ -666,7 +652,6 @@
                 metrics: ['accuracy']
             });
 
-            // Generate synthetic training data based on cry characteristics
             const numSamples = 2000;
             const xs = [];
             const ys = [];
@@ -707,50 +692,20 @@
 
         function generateSyntheticFeatures(label) {
             const rand = () => Math.random();
-            const n = () => (Math.random() - 0.5) * 0.2; // noise
+            const n = () => (Math.random() - 0.5) * 0.2;
 
             switch(label) {
-                case 0: // Hungry
-                    return [
-                        0.4 + n(), 0.5 + n(), 0.3 + n(), 0.45 + n(), 0.4 + n(),
-                        0.7 + n(), 0.3 + n(), 0.6 + n(), 0.5 + n()
-                    ];
-                case 1: // Sleepy
-                    return [
-                        0.6 + n(), 0.2 + n(), 0.2 + n(), 0.25 + n(), 0.3 + n(),
-                        0.3 + n(), 0.2 + n(), 0.3 + n(), 0.5 + n()
-                    ];
-                case 2: // Discomfort/Gas
-                    return [
-                        0.3 + n(), 0.6 + n(), 0.7 + n(), 0.35 + n(), 0.5 + n(),
-                        0.2 + n(), 0.6 + n(), 0.5 + n(), 0.5 + n()
-                    ];
-                case 3: // Pain
-                    return [
-                        0.7 + n(), 0.8 + n(), 0.5 + n(), 0.8 + n(), 0.7 + n(),
-                        0.2 + n(), 0.7 + n(), 0.9 + n(), 0.5 + n()
-                    ];
-                case 4: // Fever
-                    return [
-                        0.5 + n(), 0.3 + n(), 0.4 + n(), 0.6 + n(), 0.5 + n(),
-                        0.4 + n(), 0.5 + n(), 0.4 + n(), 0.8 + n() + (Math.random() * 0.2)
-                    ];
-                case 5: // Diaper
-                    return [
-                        0.2 + n(), 0.4 + n(), 0.3 + n(), 0.4 + n(), 0.35 + n(),
-                        0.6 + n(), 0.3 + n(), 0.4 + n(), 0.5 + n()
-                    ];
-                case 6: // Attention
-                    return [
-                        0.3 + n(), 0.3 + n(), 0.4 + n(), 0.3 + n(), 0.4 + n(),
-                        0.5 + n(), 0.4 + n(), 0.3 + n(), 0.5 + n()
-                    ];
-                default:
-                    return [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5];
+                case 0: return [0.4 + n(), 0.5 + n(), 0.3 + n(), 0.45 + n(), 0.4 + n(), 0.7 + n(), 0.3 + n(), 0.6 + n(), 0.5 + n()];
+                case 1: return [0.6 + n(), 0.2 + n(), 0.2 + n(), 0.25 + n(), 0.3 + n(), 0.3 + n(), 0.2 + n(), 0.3 + n(), 0.5 + n()];
+                case 2: return [0.3 + n(), 0.6 + n(), 0.7 + n(), 0.35 + n(), 0.5 + n(), 0.2 + n(), 0.6 + n(), 0.5 + n(), 0.5 + n()];
+                case 3: return [0.7 + n(), 0.8 + n(), 0.5 + n(), 0.8 + n(), 0.7 + n(), 0.2 + n(), 0.7 + n(), 0.9 + n(), 0.5 + n()];
+                case 4: return [0.5 + n(), 0.3 + n(), 0.4 + n(), 0.6 + n(), 0.5 + n(), 0.4 + n(), 0.5 + n(), 0.4 + n(), 0.8 + n() + (Math.random() * 0.2)];
+                case 5: return [0.2 + n(), 0.4 + n(), 0.3 + n(), 0.4 + n(), 0.35 + n(), 0.6 + n(), 0.3 + n(), 0.4 + n(), 0.5 + n()];
+                case 6: return [0.3 + n(), 0.3 + n(), 0.4 + n(), 0.3 + n(), 0.4 + n(), 0.5 + n(), 0.4 + n(), 0.3 + n(), 0.5 + n()];
+                default: return [0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5];
             }
         }
 
-        // ==================== RECORDING ====================
         async function startRecording() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -774,10 +729,8 @@
                 recordBtnText.textContent = 'Recording...';
                 analyzeBtn.disabled = true;
 
-                // Visualizer
                 visualize();
 
-                // Timer
                 recordTimer = setInterval(() => {
                     const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
                     const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
@@ -834,7 +787,6 @@
             requestAnimationFrame(visualize);
         }
 
-        // ==================== CAMERA ====================
         let cameraStream = null;
         let cameraActive = false;
 
@@ -870,7 +822,6 @@
             cameraActive = false;
         }
 
-        // ==================== ANALYSIS ====================
         async function analyzeCry() {
             if (!model || recordedChunks.length === 0) return;
 
@@ -884,7 +835,6 @@
             try {
                 audioFeatures = await extractAudioFeatures(audioBlob);
 
-                // Normalize temperature feature
                 const temp = parseFloat(tempSlider.value);
                 const tempNorm = Math.max(0, Math.min(1, (temp - 36) / 4));
 
@@ -906,11 +856,9 @@
                 inputTensor.dispose();
                 prediction.dispose();
 
-                // Apply temperature bias for fever
                 let finalProbs = Array.from(probs);
                 if (temp >= 37.8) {
                     finalProbs[4] = Math.max(finalProbs[4], 0.3 + (temp - 37.8) * 0.3);
-                    // Renormalize
                     const sum = finalProbs.reduce((a,b) => a+b, 0);
                     finalProbs = finalProbs.map(p => p / sum);
                 }
@@ -942,7 +890,6 @@
             resultDescription.textContent = config.desc;
 
             const resultMain = document.getElementById('resultMain');
-            resultMain.style.background = config.bg;
             resultMain.style.borderColor = config.border;
             resultTitle.style.color = config.color;
             resultConfidence.style.color = config.color;
@@ -951,7 +898,6 @@
             tipBox.textContent = '💡 ' + config.tip;
             tipBox.classList.add('show');
 
-            // Probability bars
             const barsContainer = document.getElementById('probabilityBars');
             barsContainer.innerHTML = '<div class="section-title" style="margin-top:0"><span>📊</span>All Probabilities</div>';
 
@@ -1015,7 +961,6 @@
             }).join('');
         }
 
-        // ==================== EVENT LISTENERS ====================
         recordBtn.addEventListener('mousedown', startRecording);
         recordBtn.addEventListener('mouseup', stopRecording);
         recordBtn.addEventListener('mouseleave', stopRecording);
@@ -1038,7 +983,6 @@
 
         analyzeBtn.addEventListener('click', analyzeCry);
 
-        // PWA Install
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
@@ -1055,7 +999,6 @@
             deferredPrompt = null;
         });
 
-        // Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('data:text/javascript,' + encodeURIComponent(`
                 self.addEventListener('install', e => self.skipWaiting());
@@ -1064,7 +1007,6 @@
             `)).catch(() => {});
         }
 
-        // Initialize
         renderHistory();
         createAndTrainModel();
     </script>
